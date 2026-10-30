@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
+import android.view.KeyEvent;
 
 import org.libsdl.app.SDLActivity;
 
@@ -23,6 +24,35 @@ public class EmulatorActivity extends SDLActivity {
             Log.w(TAG, "setenv failed", e);
         }
         super.onCreate(savedInstanceState);
+    }
+
+    /**
+     * Back opens/closes 86Box's menu. We catch it here ourselves (rather than
+     * relying on SDL forwarding KEYCODE_BACK) and send it on as a MENU key.
+     */
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled())
+                sendMenuKey();
+            return true;
+        }
+        return super.dispatchKeyEvent(event);
+    }
+
+    @Override
+    public void onBackPressed() {
+        // Reached on some Android versions/gesture setups instead of a key event.
+        sendMenuKey();
+    }
+
+    private static void sendMenuKey() {
+        try {
+            SDLActivity.onNativeKeyDown(KeyEvent.KEYCODE_MENU);
+            SDLActivity.onNativeKeyUp(KeyEvent.KEYCODE_MENU);
+        } catch (UnsatisfiedLinkError e) {
+            Log.w(TAG, "native side not ready", e);
+        }
     }
 
     @Override

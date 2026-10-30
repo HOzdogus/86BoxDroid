@@ -57,6 +57,7 @@
  *   - tap, then touch and drag: hold the left button (drag windows, select)
  *   - two-finger tap          : right click
  *   - three-finger tap        : show/hide the on-screen keyboard
+ *   - four-finger tap         : open the menu (OSD)
  *   - Back button             : open/close the menu (OSD)                  */
 static Uint64 droid_touch_start;
 static Uint64 droid_last_tap;
@@ -66,6 +67,8 @@ static int    droid_fingers;
 static int    droid_max_fingers;
 static int    droid_pending_release;
 static int    droid_dragging;
+/* The Java side turns Back into a MENU key press (see EmulatorActivity). */
+#    define DROID_MENU_KEY(sc) ((sc) == SDL_SCANCODE_AC_BACK || (sc) == SDL_SCANCODE_MENU)
 extern SDL_Mutex *mousemutex;
 
 static void
@@ -473,7 +476,7 @@ main(int argc, char **argv)
         do {
 #ifdef __ANDROID__
             if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
-                && event.key.scancode == SDL_SCANCODE_AC_BACK) {
+                && DROID_MENU_KEY(event.key.scancode)) {
                 event.key.scancode = SDL_SCANCODE_ESCAPE;
                 event.key.key      = SDLK_ESCAPE;
             }
@@ -602,8 +605,12 @@ main(int argc, char **argv)
                                     droid_buttons(1, 0);
                                     droid_dragging = 0;
                                     droid_last_tap = 0;
-                                } else if ((now - droid_touch_start) < 250 && droid_travel < 24.0f) {
-                                    if (droid_max_fingers >= 3) {
+                                } else if ((now - droid_touch_start) < (droid_max_fingers > 1 ? 400 : 250)
+                                           && droid_travel < 24.0f * droid_max_fingers) {
+                                    if (droid_max_fingers >= 4) {
+                                        flag_osd_open = osd_open(event);
+                                        droid_last_tap = 0;
+                                    } else if (droid_max_fingers == 3) {
                                         if (SDL_TextInputActive(sdl_win))
                                             SDL_StopTextInput(sdl_win);
                                         else
@@ -702,7 +709,7 @@ main(int argc, char **argv)
                             uint16_t xtkey = 0;
 
 #ifdef __ANDROID__
-                            if (event.key.scancode == SDL_SCANCODE_AC_BACK) {
+                            if (DROID_MENU_KEY(event.key.scancode)) {
                                 if (event.type == SDL_EVENT_KEY_UP)
                                     flag_osd_open = osd_open(event);
                                 break;

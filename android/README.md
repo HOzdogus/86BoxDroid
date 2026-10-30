@@ -19,7 +19,7 @@ It uses 86Box's own SDL front end (with its on-screen menu) plus a small Android
 | Tap, then touch and drag | Hold left button |
 | Two-finger tap | Right click |
 | Three-finger tap | On-screen keyboard |
-| Back | Menu (mount media, reset, quit) |
+| Back, or four-finger tap | Menu (mount media, reset, quit) |
 
 ## Building
 GitHub Actions builds everything (`.github/workflows/android.yml`).

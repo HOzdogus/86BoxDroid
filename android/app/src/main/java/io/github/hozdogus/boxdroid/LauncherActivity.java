@@ -107,7 +107,7 @@ public class LauncherActivity extends Activity {
                 + "• Tap: left click   • Two-finger tap: right click\n"
                 + "• Tap then touch and drag: hold the left button\n"
                 + "• Three-finger tap: on-screen keyboard\n"
-                + "• Back button: menu (mount CDs/floppies, reset, quit)\n\n"
+                + "• Back button or four-finger tap: menu (mount CDs/floppies, reset, quit)\n\n"
                 + "Files live in /sdcard/86BoxDroid:\n"
                 + "• isos/ – put your Windows 95/98 CD image (.iso) here\n"
                 + "• floppies/ – boot floppy images (.img)\n"
