@@ -196,10 +196,6 @@ if(APPLE)
     endif()
 endif()
 
-if(ANDROID)
-    # 86BoxDroid: make ZLIB::ZLIB visible to libpng's and libchdr's targets.
-    find_package(ZLIB REQUIRED GLOBAL)
-endif()
 find_package(Freetype REQUIRED)
 include_directories(${FREETYPE_INCLUDE_DIRS})
 if(FREETYPE_INCLUDE_DIR_ft2build)
