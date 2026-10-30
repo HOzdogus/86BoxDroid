@@ -278,13 +278,19 @@ set(CMAKE_TOP_LEVEL_PROCESSED TRUE)
 if(ANDROID)
     # 86BoxDroid: import zlib here so ZLIB::ZLIB is visible to every
     # subdirectory (libpng's and libchdr's targets link against it).
-    find_package(ZLIB REQUIRED)
+    find_library(BOXDROID_ZLIB NAMES libz.a z REQUIRED)
+    find_path(BOXDROID_ZLIB_INC zlib.h REQUIRED)
     if(NOT TARGET ZLIB::ZLIB)
         add_library(ZLIB::ZLIB UNKNOWN IMPORTED)
-        set_target_properties(ZLIB::ZLIB PROPERTIES
-            IMPORTED_LOCATION "${ZLIB_LIBRARIES}"
-            INTERFACE_INCLUDE_DIRECTORIES "${ZLIB_INCLUDE_DIRS}")
     endif()
-    message(STATUS "86BoxDroid zlib: ${ZLIB_LIBRARIES}")
+    set_target_properties(ZLIB::ZLIB PROPERTIES
+        IMPORTED_LOCATION "${BOXDROID_ZLIB}"
+        INTERFACE_INCLUDE_DIRECTORIES "${BOXDROID_ZLIB_INC}")
+    set(ZLIB_FOUND TRUE)
+    set(ZLIB_LIBRARY "${BOXDROID_ZLIB}")
+    set(ZLIB_LIBRARIES "${BOXDROID_ZLIB}")
+    set(ZLIB_INCLUDE_DIR "${BOXDROID_ZLIB_INC}")
+    set(ZLIB_INCLUDE_DIRS "${BOXDROID_ZLIB_INC}")
+    message(STATUS "86BoxDroid zlib: ${BOXDROID_ZLIB}")
 endif()
 add_subdirectory(src)
