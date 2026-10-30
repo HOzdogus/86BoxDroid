@@ -179,6 +179,11 @@ void osd_init(void)
     /* Leave the host cursor to the emulator; the OSD never sets it. */
     io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
     io.IniFilename = nullptr; /* don't save layout */
+#ifdef __ANDROID__
+    /* Finger taps land further apart than mouse clicks. */
+    io.MouseDoubleClickTime    = 0.5f;
+    io.MouseDoubleClickMaxDist = 48.0f;
+#endif
 
     osd_set_scale(1.0f);
     osd_core_setup_style();

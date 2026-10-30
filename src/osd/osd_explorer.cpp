@@ -15,6 +15,14 @@
 namespace fs = std::filesystem;
 #else
 #include "filesystem.hpp"
+
+/* 86BoxDroid: on a touchscreen a single tap opens a folder (double-taps are
+ * unreliable because fingers drift); files still need a double-tap or Load. */
+#ifdef __ANDROID__
+#    define EXPLORER_OPEN_CLICK(entry) (ImGui::IsMouseDoubleClicked(0) || (entry).kind != EntryKind::File)
+#else
+#    define EXPLORER_OPEN_CLICK(entry) ImGui::IsMouseDoubleClicked(0)
+#endif
 namespace fs = emu::filesystem;
 #endif
 
@@ -335,7 +343,7 @@ OsdExplorer::Draw()
                     focused_slot_ = FocusSlot::FileList;
                     file_entry_selection_ = index;
                     snprintf(filename_input_.data(), filename_input_.size(), "%s", entry_label(entry));
-                    if (ImGui::IsMouseDoubleClicked(0) && activate_entry(entry)) {
+                    if (EXPLORER_OPEN_CLICK(entry) && activate_entry(entry)) {
                         ImGui::EndChild();
                         ImGui::End();
                         return result;
@@ -371,7 +379,7 @@ OsdExplorer::Draw()
                                   ImGuiSelectableFlags_AllowDoubleClick | ImGuiSelectableFlags_SelectOnNav)) {
                 focused_slot_              = FocusSlot::DirectoryList;
                 directory_entry_selection_ = index;
-                if (ImGui::IsMouseDoubleClicked(0) && activate_entry(entry)) {
+                if (EXPLORER_OPEN_CLICK(entry) && activate_entry(entry)) {
                     ImGui::EndChild();
                     ImGui::End();
                     return result;
@@ -423,7 +431,7 @@ OsdExplorer::Draw()
                 focused_slot_ = FocusSlot::EntryList;
                 visible_entry_selection_ = index;
                 snprintf(filename_input_.data(), filename_input_.size(), "%s", entry_label(entry));
-                if (ImGui::IsMouseDoubleClicked(0)) {
+                if (EXPLORER_OPEN_CLICK(entry)) {
                     const bool accepted = TryActivateEntry(entry, &result);
                     if (accepted || entry.kind != EntryKind::File) {
                         ImGui::EndChild();
