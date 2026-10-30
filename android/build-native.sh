@@ -21,7 +21,7 @@ mkdir -p "$WORK"
 
 echo "::group::vcpkg dependencies"
 export ANDROID_NDK_HOME="$NDK"
-"$VCPKG/vcpkg" install \
+"$VCPKG/vcpkg" install --classic \
     --triplet "$TRIPLET" \
     --overlay-triplets "$HERE/triplets" \
     --clean-after-build \
