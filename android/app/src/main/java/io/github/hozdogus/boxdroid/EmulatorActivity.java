@@ -20,6 +20,9 @@ public class EmulatorActivity extends SDLActivity {
             Os.setenv("XDG_DATA_HOME", Storage.root().getAbsolutePath(), true);
             Os.setenv("XDG_CONFIG_HOME", Storage.root().getAbsolutePath(), true);
             Os.setenv("TMPDIR", getCacheDir().getAbsolutePath(), true);
+            // Where the menu's file browser starts (see osd_core.cpp).
+            Os.setenv("BOXDROID_ISO_DIR", Storage.isos().getAbsolutePath(), true);
+            Os.setenv("BOXDROID_FLOPPY_DIR", Storage.floppies().getAbsolutePath(), true);
         } catch (ErrnoException e) {
             Log.w(TAG, "setenv failed", e);
         }

@@ -13,6 +13,7 @@
 #include <functional>
 #include <algorithm>
 #include <cctype>
+#include <cstdlib>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
@@ -317,17 +318,38 @@ last_known_path(OsdView view, char *mounted, char *(&history)[entries])
     return nullptr;
 }
 
+#ifdef __ANDROID__
+/* 86BoxDroid: with nothing mounted before, start in /sdcard/86BoxDroid/isos
+ * or /floppies (set by EmulatorActivity) instead of the filesystem root. */
+static const char *
+android_default_dir(const char *found, const char *env)
+{
+    if (found != nullptr && found[0] != '\0')
+        return found;
+    const char *dir = getenv(env);
+    return (dir != nullptr && dir[0] != '\0') ? dir : found;
+}
+#endif
+
 static const char *
 browser_initial_path(OsdView view)
 {
     fdd_drive_t *drv = &drives[0];
 
     switch (view) {
+#ifdef __ANDROID__
+        case VIEW_FILE_FLOPPY:
+            return android_default_dir(last_known_path(view, drv->image_path, drives[0].image_history), "BOXDROID_FLOPPY_DIR");
+        case VIEW_FILE_CD:
+        case VIEW_CD_FOLDER:
+            return android_default_dir(last_known_path(view, cdrom[0].image_path, cdrom[0].image_history), "BOXDROID_ISO_DIR");
+#else
         case VIEW_FILE_FLOPPY:
             return last_known_path(view, drv->image_path, drives[0].image_history);
         case VIEW_FILE_CD:
         case VIEW_CD_FOLDER:
             return last_known_path(view, cdrom[0].image_path, cdrom[0].image_history);
+#endif
         case VIEW_FILE_RDISK:
             return last_known_path(view, rdisk_drives[0].image_path, rdisk_drives[0].image_history);
         case VIEW_FILE_CART:
