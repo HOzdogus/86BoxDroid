@@ -56,7 +56,7 @@ cmake -S "$ROOT" -B "$WORK/86box-build" -G Ninja \
     -DPKG_CONFIG_ARGN=--static \
     -DQT=OFF -DSTATIC_BUILD=OFF -DDYNAREC=ON \
     -DOPENAL=ON -DRTMIDI=OFF -DFLUIDSYNTH=OFF -DMUNT=OFF -DSOUNDCANVAS=OFF \
-    -DDISCORD=OFF -DVNC=OFF -DLIBRASHADER=OFF -DMINITRACE=OFF
+    -DDISCORD=OFF -DVNC=OFF -DMINITRACE=OFF
 cmake --build "$WORK/86box-build" -j"$(nproc)"
 echo "::endgroup::"
 
