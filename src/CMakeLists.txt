@@ -24,7 +24,18 @@ if(APPLE)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 endif()
 
-add_executable(86Box
+# 86BoxDroid: on Android the emulator is a shared library (libmain.so)
+# loaded by SDL's Java activity instead of an executable.
+macro(_86box_add_target name)
+    if(ANDROID)
+        add_library(${name} SHARED ${ARGN})
+        set_target_properties(${name} PROPERTIES OUTPUT_NAME main)
+    else()
+        add_executable(${name} ${ARGN})
+    endif()
+endmacro()
+
+_86box_add_target(86Box
     86box.c
     config.c
     timer.c

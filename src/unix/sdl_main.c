@@ -46,6 +46,40 @@
 #include "sdl_render.h"
 #include "sdl_osd.h"
 
+#ifdef __ANDROID__
+/* SDL's Java activity calls SDL_main() in libmain.so; this header renames
+ * main() below accordingly. */
+#    include <SDL3/SDL_main.h>
+
+/* 86BoxDroid touch controls: the screen works like a laptop trackpad.
+ *   - drag one finger         : move the pointer
+ *   - tap                     : left click
+ *   - tap, then touch and drag: hold the left button (drag windows, select)
+ *   - two-finger tap          : right click
+ *   - three-finger tap        : show/hide the on-screen keyboard
+ *   - Back button             : open/close the menu (OSD)                  */
+static Uint64 droid_touch_start;
+static Uint64 droid_last_tap;
+static Uint64 droid_release_at;
+static float  droid_travel;
+static int    droid_fingers;
+static int    droid_max_fingers;
+static int    droid_pending_release;
+static int    droid_dragging;
+extern SDL_Mutex *mousemutex;
+
+static void
+droid_buttons(int mask, int down)
+{
+    SDL_LockMutex(mousemutex);
+    if (down)
+        mouse_set_buttons_ex(mouse_get_buttons_ex() | mask);
+    else
+        mouse_set_buttons_ex(mouse_get_buttons_ex() & ~mask);
+    SDL_UnlockMutex(mousemutex);
+}
+#endif
+
 extern SDL_Window         *sdl_win;
 
 int             rctrl_is_lalt;
@@ -377,6 +411,11 @@ main(int argc, char **argv)
     SDL_Event event;
     int       ret = 0;
 
+#ifdef __ANDROID__
+    /* Deliver the Back button to us instead of closing the app. */
+    SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
+    SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
+#endif
     SDL_Init(0);
     ret = pc_init(argc, argv);
     if (ret == 0)
@@ -401,6 +440,9 @@ main(int argc, char **argv)
 
     mousemutex = SDL_CreateMutex();
 
+#ifdef __ANDROID__
+    start_in_fullscreen = 1;
+#endif
     if (start_in_fullscreen)
         video_fullscreen = 1;
 
@@ -429,6 +471,13 @@ main(int argc, char **argv)
         if (!SDL_WaitEventTimeout(&event, 1))
             goto check_flags;
         do {
+#ifdef __ANDROID__
+            if ((event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP)
+                && event.key.scancode == SDL_SCANCODE_AC_BACK) {
+                event.key.scancode = SDL_SCANCODE_ESCAPE;
+                event.key.key      = SDLK_ESCAPE;
+            }
+#endif
             if (flag_osd_open == 1)
             {
                 // route almost everything to the OSD
@@ -507,6 +556,10 @@ main(int argc, char **argv)
                         }
                     case SDL_EVENT_MOUSE_MOTION:
                         {
+#ifdef __ANDROID__
+                            if (event.motion.which == SDL_TOUCH_MOUSEID)
+                                break;
+#endif
                             if (mouse_capture || video_fullscreen) {
                                 SDL_LockMutex(mousemutex);
                                 mouse_scale(event.motion.xrel, event.motion.yrel);
@@ -517,16 +570,70 @@ main(int argc, char **argv)
                     /* Touch events */
                     case SDL_EVENT_FINGER_DOWN:
                         {
-                            // Trap these but ignore them for now
+#ifdef __ANDROID__
+                            Uint64 now = SDL_GetTicks();
+                            droid_fingers++;
+                            if (droid_fingers == 1) {
+                                droid_touch_start = now;
+                                droid_travel      = 0.0f;
+                                droid_max_fingers = 1;
+                                /* Touching again right after a tap holds the left button. */
+                                if (droid_last_tap && (now - droid_last_tap) < 300) {
+                                    if (droid_pending_release) {
+                                        droid_buttons(droid_pending_release, 0);
+                                        droid_pending_release = 0;
+                                    }
+                                    droid_buttons(1, 1);
+                                    droid_dragging = 1;
+                                }
+                            } else if (droid_fingers > droid_max_fingers)
+                                droid_max_fingers = droid_fingers;
+#endif
                             break;
                         }
                     case SDL_EVENT_FINGER_UP:
                         {
-                            // Trap these but ignore them for now
+#ifdef __ANDROID__
+                            Uint64 now = SDL_GetTicks();
+                            if (droid_fingers > 0)
+                                droid_fingers--;
+                            if (droid_fingers == 0) {
+                                if (droid_dragging) {
+                                    droid_buttons(1, 0);
+                                    droid_dragging = 0;
+                                    droid_last_tap = 0;
+                                } else if ((now - droid_touch_start) < 250 && droid_travel < 24.0f) {
+                                    if (droid_max_fingers >= 3) {
+                                        if (SDL_TextInputActive(sdl_win))
+                                            SDL_StopTextInput(sdl_win);
+                                        else
+                                            SDL_StartTextInput(sdl_win);
+                                        droid_last_tap = 0;
+                                    } else {
+                                        int mask = (droid_max_fingers == 2) ? 2 : 1;
+                                        droid_buttons(mask, 1);
+                                        droid_pending_release = mask;
+                                        droid_release_at      = now + 60;
+                                        droid_last_tap        = (mask == 1) ? now : 0;
+                                    }
+                                } else
+                                    droid_last_tap = 0;
+                            }
+#endif
                             break;
                         }
                     case SDL_EVENT_FINGER_MOTION:
                         {
+#ifdef __ANDROID__
+                            {
+                                int ww, wh;
+                                SDL_GetWindowSize(sdl_win, &ww, &wh);
+                                droid_travel += SDL_fabsf(event.tfinger.dx * ww) + SDL_fabsf(event.tfinger.dy * wh);
+                            }
+                            /* Only the first finger moves the pointer. */
+                            if (droid_fingers > 1)
+                                break;
+#endif
                             // See SDL_TouchFingerEvent
                             if (mouse_capture || video_fullscreen) {
                                 SDL_LockMutex(mousemutex);
@@ -544,6 +651,10 @@ main(int argc, char **argv)
                     case SDL_EVENT_MOUSE_BUTTON_DOWN:
                     case SDL_EVENT_MOUSE_BUTTON_UP:
                         {
+#ifdef __ANDROID__
+                            if (event.button.which == SDL_TOUCH_MOUSEID)
+                                break;
+#endif
                             if ((event.button.button == SDL_BUTTON_LEFT)
                                 && !(mouse_capture || video_fullscreen)
 #ifdef USE_SDL2_LIB
@@ -589,6 +700,14 @@ main(int argc, char **argv)
                     case SDL_EVENT_KEY_UP:
                         {
                             uint16_t xtkey = 0;
+
+#ifdef __ANDROID__
+                            if (event.key.scancode == SDL_SCANCODE_AC_BACK) {
+                                if (event.type == SDL_EVENT_KEY_UP)
+                                    flag_osd_open = osd_open(event);
+                                break;
+                            }
+#endif
 
 #ifdef USE_SDL2_LIB
                             if (event.key.keysym.scancode == osd_open_first_key)
@@ -680,6 +799,12 @@ main(int argc, char **argv)
         } while (SDL_PollEvent(&event));
 
 check_flags:
+#ifdef __ANDROID__
+        if (droid_pending_release && SDL_GetTicks() >= droid_release_at) {
+            droid_buttons(droid_pending_release, 0);
+            droid_pending_release = 0;
+        }
+#endif
         if (blitreq) {
             extern void sdl_blit(int x, int y, int w, int h);
             sdl_blit(params.x, params.y, params.w, params.h);

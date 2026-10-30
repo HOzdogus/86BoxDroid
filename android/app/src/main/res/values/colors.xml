@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="win_teal">#FF008080</color>
+    <color name="win_grey">#FFC0C0C0</color>
+    <color name="win_navy">#FF000080</color>
+</resources>

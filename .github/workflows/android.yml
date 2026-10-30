@@ -1,0 +1,81 @@
+name: Android APK
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build pkg-config autoconf automake libtool python3-venv
+
+      - name: Cache vcpkg packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vcpkg/archives
+          key: vcpkg-arm64-android-${{ hashFiles('android/triplets/*', 'android/build-native.sh') }}
+          restore-keys: vcpkg-arm64-android-
+
+      - name: Build native libraries (SDL3 + 86Box)
+        env:
+          VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
+        run: |
+          export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
+          echo "NDK: $ANDROID_NDK_HOME"
+          bash android/build-native.sh
+
+      - name: Upload vcpkg logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcpkg-logs
+          path: ${{ env.VCPKG_INSTALLATION_ROOT }}/buildtrees/**/*.log
+          if-no-files-found: ignore
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.12'
+
+      - name: Build APK
+        run: gradle -p android assembleDebug --no-daemon
+
+      - name: Name APK
+        run: |
+          mkdir -p out
+          cp android/app/build/outputs/apk/debug/app-debug.apk "out/86BoxDroid-${GITHUB_RUN_NUMBER}.apk"
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 86BoxDroid-apk
+          path: out/*.apk
+
+      - name: Publish to the "latest" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest out/*.apk \
+            --title "86BoxDroid build ${GITHUB_RUN_NUMBER}" \
+            --notes "Automatic build from ${GITHUB_SHA::7}. Install the APK on an arm64 Android phone (Android 8+)." \
+            --prerelease --target "$GITHUB_SHA"
