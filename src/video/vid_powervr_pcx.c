@@ -322,7 +322,11 @@ static double
 pcx_now_ms(void)
 {
     struct timespec ts;
+#if defined(__ANDROID__) && __ANDROID_API__ < 29
+    clock_gettime(CLOCK_REALTIME, &ts); /* timespec_get() needs API 29 */
+#else
     timespec_get(&ts, TIME_UTC);
+#endif
     return ts.tv_sec * 1000.0 + ts.tv_nsec / 1.0e6;
 }
 
