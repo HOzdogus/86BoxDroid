@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -37,20 +37,23 @@ jobs:
           restore-keys: vcpkg-arm64-android-
 
       - name: Build native libraries (SDL3 + 86Box)
-        env:
-          VCPKG_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}
         run: |
           export ANDROID_NDK_HOME="$ANDROID_NDK_LATEST_HOME"
-          echo "NDK: $ANDROID_NDK_HOME"
-          bash android/build-native.sh
-
-      - name: Upload vcpkg logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: vcpkg-logs
-          path: ${{ env.VCPKG_INSTALLATION_ROOT }}/buildtrees/**/*.log
-          if-no-files-found: ignore
+          export VCPKG_ROOT="$VCPKG_INSTALLATION_ROOT"
+          echo "NDK: $ANDROID_NDK_HOME  vcpkg: $VCPKG_ROOT"
+          set +e
+          bash android/build-native.sh 2>&1 | tee build.log
+          rc=${PIPESTATUS[0]}
+          if [ $rc -ne 0 ]; then
+            # Surface the error as annotations (readable without downloading logs).
+            annotate() { python3 -c "import sys;t=sys.argv[1];d=sys.stdin.read()[-6000:];print('::error title='+t+'::'+d.replace('%','%25').replace('\r','').replace('\n','%0A'))" "$1"; }
+            grep -n -E "error:|Error|FAILED|undefined reference" build.log | tail -n 40 | annotate "errors in build log"
+            tail -n 60 build.log | annotate "end of build log"
+            for f in $(ls -t $(find "$VCPKG_ROOT/buildtrees" -name '*.log' 2>/dev/null) 2>/dev/null | head -n 3); do
+              tail -n 50 "$f" | annotate "$(basename "$f")"
+            done
+          fi
+          exit $rc
 
       - uses: gradle/actions/setup-gradle@v4
         with:
