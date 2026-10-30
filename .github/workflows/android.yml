@@ -80,5 +80,5 @@ jobs:
           gh release delete latest --yes --cleanup-tag 2>/dev/null || true
           gh release create latest out/*.apk \
             --title "86BoxDroid build ${GITHUB_RUN_NUMBER}" \
-            --notes "Automatic build from ${GITHUB_SHA::7}. Install the APK on an arm64 Android phone (Android 8+)." \
+            --notes "Automatic build from ${GITHUB_SHA::7}. Install the APK on an arm64 Android phone (Android 10+)." \
             --prerelease --target "$GITHUB_SHA"
