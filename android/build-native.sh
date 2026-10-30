@@ -54,6 +54,8 @@ cmake -S "$ROOT" -B "$WORK/86box-build" -G Ninja \
     -DCMAKE_PREFIX_PATH="$WORK/sdl-prefix" \
     -DCMAKE_FIND_ROOT_PATH="$WORK/sdl-prefix" \
     -DPKG_CONFIG_ARGN=--static \
+    -DCMAKE_C_FLAGS="-I$WORK/sdl-prefix/include" \
+    -DCMAKE_CXX_FLAGS="-I$WORK/sdl-prefix/include" \
     -DQT=OFF -DSTATIC_BUILD=OFF -DDYNAREC=ON \
     -DOPENAL=ON -DRTMIDI=OFF -DFLUIDSYNTH=OFF -DMUNT=OFF -DSOUNDCANVAS=OFF \
     -DDISCORD=OFF -DVNC=OFF -DMINITRACE=OFF
