@@ -55,9 +55,11 @@ jobs:
           fi
           exit $rc
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: '8.12'
+          # SDL's sample project (only used for its Java sources) ships a wrapper jar.
+          validate-wrappers: false
 
       - name: Build APK
         run: gradle -p android assembleDebug --no-daemon
